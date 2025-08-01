@@ -1,77 +1,136 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const tileSize = 20;
+const { useState, useEffect } = React;
 
-const board = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,1,1,0,1,1,0,0,1,1,0,1,1,0,1,1,0,0,1,1,0,1,1,0,1,0,1],
-  [1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-];
-canvas.width = board[0].length * tileSize;
-canvas.height = board.length * tileSize;
+function Calculator() {
+    const [current, setCurrent] = useState(localStorage.getItem('calc_current') || '0');
+    const [previous, setPrevious] = useState(null);
+    const [operator, setOperator] = useState(null);
 
-const pacman = { x: 1, y: 1, dirX: 0, dirY: 0 };
-let score = 0;
+    useEffect(() => {
+        localStorage.setItem('calc_current', current);
+    }, [current]);
 
-function drawBoard() {
-  for (let y = 0; y < board.length; y++) {
-    for (let x = 0; x < board[y].length; x++) {
-      if (board[y][x] === 1) {
-        ctx.fillStyle = 'blue';
-        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
-      } else {
-        ctx.fillStyle = 'black';
-        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
-        if (board[y][x] === 0) {
-          ctx.fillStyle = 'white';
-          ctx.beginPath();
-          ctx.arc(x * tileSize + tileSize/2, y * tileSize + tileSize/2, 3, 0, Math.PI * 2);
-          ctx.fill();
+    const appendNumber = (num) => {
+        setCurrent(c => c === '0' ? num : c + num);
+    };
+
+    const clearAll = () => {
+        setCurrent('0');
+        setPrevious(null);
+        setOperator(null);
+    };
+
+    const chooseOperator = (op) => {
+        if (operator !== null) {
+            compute();
         }
-      }
-    }
-  }
+        setPrevious(current);
+        setCurrent('0');
+        setOperator(op);
+    };
+
+    const compute = () => {
+        if (operator === null || previous === null) return;
+        const prev = parseFloat(previous);
+        const curr = parseFloat(current);
+        let result = curr;
+        switch (operator) {
+            case 'add':
+                result = prev + curr;
+                break;
+            case 'subtract':
+                result = prev - curr;
+                break;
+            case 'multiply':
+                result = prev * curr;
+                break;
+            case 'divide':
+                result = prev / curr;
+                break;
+            default:
+                break;
+        }
+        setCurrent(result.toString());
+        setOperator(null);
+        setPrevious(null);
+    };
+
+    const addDecimal = () => {
+        setCurrent(c => c.includes('.') ? c : c + '.');
+    };
+
+    const toggleSign = () => {
+        setCurrent(c => c.startsWith('-') ? c.slice(1) : (c !== '0' ? '-' + c : c));
+    };
+
+    const percent = () => {
+        setCurrent(c => (parseFloat(c) / 100).toString());
+    };
+
+    const handleButton = (e) => {
+        const action = e.target.dataset.action;
+        const number = e.target.dataset.number;
+        if (number) {
+            appendNumber(number);
+            return;
+        }
+        switch (action) {
+            case 'clear':
+                clearAll();
+                break;
+            case 'sign':
+                toggleSign();
+                break;
+            case 'percent':
+                percent();
+                break;
+            case 'decimal':
+                addDecimal();
+                break;
+            case 'add':
+            case 'subtract':
+            case 'multiply':
+            case 'divide':
+                chooseOperator(action);
+                break;
+            case 'equals':
+                compute();
+                break;
+            default:
+                break;
+        }
+    };
+
+    return (
+        <div id="calculator">
+            <div id="display">{current}</div>
+            <div id="buttons" onClick={handleButton}>
+                <button className="function" data-action="clear">AC</button>
+                <button className="function" data-action="sign">±</button>
+                <button className="function" data-action="percent">%</button>
+                <button className="operator" data-action="divide">÷</button>
+
+                <button data-number="7">7</button>
+                <button data-number="8">8</button>
+                <button data-number="9">9</button>
+                <button className="operator" data-action="multiply">×</button>
+
+                <button data-number="4">4</button>
+                <button data-number="5">5</button>
+                <button data-number="6">6</button>
+                <button className="operator" data-action="subtract">−</button>
+
+                <button data-number="1">1</button>
+                <button data-number="2">2</button>
+                <button data-number="3">3</button>
+                <button className="operator" data-action="add">+</button>
+
+                <button className="zero" data-number="0">0</button>
+                <button data-action="decimal">.</button>
+                <button className="operator" data-action="equals">=</button>
+            </div>
+        </div>
+    );
 }
 
-function drawPacman() {
-  ctx.fillStyle = 'yellow';
-  ctx.beginPath();
-  ctx.arc(pacman.x * tileSize + tileSize/2, pacman.y * tileSize + tileSize/2, tileSize/2 - 2, 0.25 * Math.PI, 1.75 * Math.PI);
-  ctx.lineTo(pacman.x * tileSize + tileSize/2, pacman.y * tileSize + tileSize/2);
-  ctx.fill();
-}
-
-function update() {
-  const newX = pacman.x + pacman.dirX;
-  const newY = pacman.y + pacman.dirY;
-
-  if (board[newY][newX] !== 1) {
-    pacman.x = newX;
-    pacman.y = newY;
-    if (board[newY][newX] === 0) {
-      board[newY][newX] = 2;
-      score++;
-    }
-  }
-}
-
-function gameLoop() {
-  update();
-  drawBoard();
-  drawPacman();
-  requestAnimationFrame(gameLoop);
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowUp') { pacman.dirX = 0; pacman.dirY = -1; }
-  if (e.key === 'ArrowDown') { pacman.dirX = 0; pacman.dirY = 1; }
-  if (e.key === 'ArrowLeft') { pacman.dirX = -1; pacman.dirY = 0; }
-  if (e.key === 'ArrowRight') { pacman.dirX = 1; pacman.dirY = 0; }
-});
-
-drawBoard();
-drawPacman();
-requestAnimationFrame(gameLoop);
+const root = ReactDOM.createRoot(document.getElementById('app'));
+root.render(<Calculator />);
